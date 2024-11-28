@@ -1,0 +1,15 @@
+__pycache__/
+
+.venv
+
+*.bak
+*.db
+*.sqlite3
+*.log
+
+/*
+
+!/app
+!/run.py
+!/.gitignore
+!/requirements.txt
