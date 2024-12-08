@@ -1,6 +1,6 @@
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import Message
+from aiogram.types import Message, KeyboardButton, ReplyKeyboardMarkup, WebAppInfo
 
 from aiogram.utils.deep_linking import decode_payload, create_start_link
 from aiogram import Bot
@@ -76,7 +76,12 @@ async def cmd_start(message: Message):
 #Справка
 @router.message(Command('help'))
 async def help_pipisa(message: Message):
-    await message.reply('<b>Описание команд бота:</b>\n<a href="/grow">/grow</a> - Попытайте удачу и выращивайте вашу "Пипису" раз в день. Диапазон от -5 до 10\n<a href="/top">/top</a> - Посмотреть рейтинг "Пипис" чата\n<a href="/global_top">/global_top</a> - Посмотреть глобальный рейтинг "Пипис"\n<a href="/give">/give</a> - Передайте часть своей "Пиписы" другому пользователю, например, в споре на сантиметры\n<a href="/ref">/ref</a> - Пригласите друга по реферальной ссылке и получите сантиметры за это', parse_mode='HTML')
+    kb_list = [
+        [KeyboardButton(text='Web Apps', web_app=WebAppInfo(url="https://telegram.mihailgok.ru"))]
+    ]
+    keyboard = ReplyKeyboardMarkup(keyboard=kb_list, resize_keyboard=True, one_time_keyboard=True)
+
+    await message.reply('<b>Описание команд бота:</b>\n<a href="/grow">/grow</a> - Попытайте удачу и выращивайте вашу "Пипису" раз в день. Диапазон от -5 до 10\n<a href="/top">/top</a> - Посмотреть рейтинг "Пипис" чата\n<a href="/global_top">/global_top</a> - Посмотреть глобальный рейтинг "Пипис"\n<a href="/give">/give</a> - Передайте часть своей "Пиписы" другому пользователю, например, в споре на сантиметры\n<a href="/ref">/ref</a> - Пригласите друга по реферальной ссылке и получите сантиметры за это', parse_mode='HTML', reply_markup=keyboard)
 
 
 #Увеличение пиписы

@@ -10,6 +10,5 @@ __pycache__/
 /*
 
 !/app
-!/run.py
 !/.gitignore
 !/requirements.txt
