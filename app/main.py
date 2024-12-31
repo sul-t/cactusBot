@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.bot.create_bot import bot, dp, start_bot, stop_bot
 from app.bot.handlers.router import router as bot_router
 from app.config import settings
-# from app.game.router import router as game_router
+from app.game.router import router as game_router
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -60,7 +60,7 @@ async def webhook(request: Request) -> None:
 
 
 
-# app.include_router(game_router)
+app.include_router(game_router)
 
 
 

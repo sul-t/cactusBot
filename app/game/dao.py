@@ -10,8 +10,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import Base
-from app.game.models import User, Promocode, UsesOfPromo
-from app.game.schemas import UserModel
+from app.game.models import User, Promocode, UsesOfPromo, Bonus
+from app.game.schemas import UserModel, BonusModel
+from app.game.schemas import UserDataRequest, UserDataRequest
 
 from aiogram.types import User as tgUser
 
@@ -32,7 +33,7 @@ class UserDAO(Base):
 
             return record
         except SQLAlchemyError as e:
-            raise e
+            print(e)
         
     @classmethod
     async def add_user(cls, session: AsyncSession, values: BaseModel):
@@ -45,22 +46,23 @@ class UserDAO(Base):
         except AssertionError as e:
             await session.rollback()
             
-            raise e
+            print(e)
 
         return new_instance
     
     @classmethod
-    async def add_or_update_user(cls, session: AsyncSession, from_user: tgUser, length: int = 0):
-        user = await session.get(cls.model, from_user.id)
+    async def add_or_update_user(cls, session: AsyncSession, user_info: UserDataRequest, length: int = 0):
+        user = await session.get(cls.model, user_info.id)
+
         if user:
             changes_count = 0
 
-            if user.username == from_user.username:
-                user.username == from_user.username
+            if user.username == user_info.username:
+                user.username == user_info.username
                 changes_count += 1
 
-            if user.first_name == from_user.first_name:
-                user.first_name == from_user.first_name
+            if user.first_name == user_info.first_name:
+                user.first_name == user_info.first_name
                 changes_count += 1
             
             if changes_count != 0:
@@ -70,17 +72,19 @@ class UserDAO(Base):
 
         
         values = UserModel(
-            user_id = from_user.id,
-            username = from_user.username,
-            first_name = from_user.first_name,
+            user_id = user_info.id,
+            username = user_info.username,
+            first_name = user_info.first_name,
             length = length,
-            last_grow = 0
+            last_grow = 0,
+            bonus_attempts = 0,
+            grow_streak = 0
         )
 
         return await UserDAO.add_user(session=session, values=values)
 
     @classmethod
-    async def get_top_users(cls, session: AsyncSession, limit: int = 100):
+    async def get_top_users(cls, session: AsyncSession, user_id: int, limit: int = 100):
         try:
             query = (
                 select(cls.model.first_name, cls.model.length)
@@ -99,7 +103,6 @@ class UserDAO(Base):
             return ranked_records
         except SQLAlchemyError as e:
             print(e)
-            raise e
     
     # увеличение/уменьшение кактуса
     @classmethod
@@ -107,15 +110,36 @@ class UserDAO(Base):
         try:
             user = await session.get(cls.model, user_id)
 
-            user.length += length
-            user.last_grow = datetime.now().date()
+            if datetime.now().date().day == user.last_grow.day:
+                user.bonus_attempts -= 1
+                user.length += length
+
+                bonuses = BonusModel(
+                    bonus_cm = 0,
+                    bonus_attempts = user.bonus_attempts
+                )
+            else:
+                if (datetime.now().date().day - user.last_grow.day) > 1:
+                    user.grow_streak = 0
+
+                user.grow_streak += 1
+
+                if user.grow_streak > 16:
+                    bonuses = await session.get(Bonus, 16)
+                else:
+                    bonuses = await session.get(Bonus, user.grow_streak)
+
+                user.length += length + bonuses.bonus_cm
+                user.last_grow = datetime.now().date()
+                user.bonus_attempts += bonuses.bonus_attempts
+
             await session.commit()
 
-            return user
+            return user, bonuses
         except AssertionError as e:
             await session.rollback()
-
-            raise print(e)
+            
+            print(e)
             
 
 class PromocodeDAO(Base):
@@ -130,5 +154,25 @@ class UsesOfPromoDAO(Base):
 
     model = UsesOfPromo
 
+class BonusDAO(Base):
+    __tablename__ = 'bonus_dao'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
+    model = Bonus
 
+    @classmethod
+    async def get_bonuses(cls, session: AsyncSession):
+        try:
+            query = select(cls.model)
+
+            result = await session.execute(query)
+            records = result.fetchall()
+
+            bonus_records = [
+                {"day": bonus.min_streak, "bonus_cm": bonus.bonus_cm, "bonus_attempts": bonus.bonus_attempts}
+                for bonus in records
+            ]
+
+            return bonus_records
+        except SQLAlchemyError as e:
+            print(e)

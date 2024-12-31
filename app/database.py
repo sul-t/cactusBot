@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession, async_sessionmaker, create_async_engine
 
 from functools import wraps
 
@@ -38,3 +38,15 @@ def connection(isolation_level=None):
         return wrapper
             
     return decorator
+
+
+
+async def get_session() -> AsyncSession:
+    async with async_session_maker() as session:
+        try:
+            yield session 
+        except Exception:
+            await session.rollback()  
+            raise
+        finally:
+            await session.close()  
