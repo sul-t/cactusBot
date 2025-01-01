@@ -13,3 +13,4 @@ __pycache__/
 !/.gitignore
 !/requirements.txt
 !/data
+!/alembic.ini
