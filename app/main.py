@@ -13,13 +13,12 @@ from aiogram.types import Update
 
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='log.log', filemode='a', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print('Starting bot setup...')
     logging.info('Starting bot setup...')
 
     dp.include_router(bot_router)

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import Base
 from app.game.models import User, Promocode, UsesOfPromo, Bonus
-from app.game.schemas import UserModel, BonusModel
+from app.game.schemas import UserModel, BonusModel, UsesOfPromoModel
 from app.game.schemas import UserDataRequest, UserDataRequest
 
 from aiogram.types import User as tgUser
@@ -52,36 +52,41 @@ class UserDAO(Base):
     
     @classmethod
     async def add_or_update_user(cls, session: AsyncSession, user_info: UserDataRequest, length: int = 0):
-        user = await session.get(cls.model, user_info.id)
+        try:
+            user = await session.get(cls.model, user_info.id)
 
-        if user:
-            changes_count = 0
+            if user:
+                changes_count = 0
 
-            if user.username == user_info.username:
-                user.username == user_info.username
-                changes_count += 1
+                if user.username == user_info.username:
+                    user.username == user_info.username
+                    changes_count += 1
 
-            if user.first_name == user_info.first_name:
-                user.first_name == user_info.first_name
-                changes_count += 1
+                if user.first_name == user_info.first_name:
+                    user.first_name == user_info.first_name
+                    changes_count += 1
+                
+                if changes_count != 0:
+                    await session.commit()
+
+                return user
+
             
-            if changes_count != 0:
-                session.commit()
+            values = UserModel(
+                user_id = user_info.id,
+                username = user_info.username,
+                first_name = user_info.first_name,
+                length = length,
+                last_grow = 0,
+                bonus_attempts = 0,
+                grow_streak = 0
+            )
 
-            return user
+            return await UserDAO.add_user(session=session, values=values)
+        except SQLAlchemyError as e:
+            await session.rollback()
 
-        
-        values = UserModel(
-            user_id = user_info.id,
-            username = user_info.username,
-            first_name = user_info.first_name,
-            length = length,
-            last_grow = 0,
-            bonus_attempts = 0,
-            grow_streak = 0
-        )
-
-        return await UserDAO.add_user(session=session, values=values)
+            print(e)
 
     @classmethod
     async def get_top_users(cls, session: AsyncSession, user_id: int, limit: int = 100):
@@ -103,7 +108,23 @@ class UserDAO(Base):
             return ranked_records
         except SQLAlchemyError as e:
             print(e)
+
     
+    @classmethod
+    async def add_length_pipisa(cls, session: AsyncSession, user_id: int, length: int):
+        try:
+            user = await session.get(cls.model, user_id)
+            user.length += length
+
+            await session.commit()
+
+            return user
+        except SQLAlchemyError as e:
+            await session.rollback()
+
+            print(e)
+    
+
     # увеличение/уменьшение кактуса
     @classmethod
     async def add_length_cactus(cls, session: AsyncSession, user_id: int, length: int):
@@ -140,7 +161,7 @@ class UserDAO(Base):
             await session.rollback()
             
             print(e)
-            
+
 
 class PromocodeDAO(Base):
     __tablename__ = 'promocode_dao'
@@ -148,11 +169,70 @@ class PromocodeDAO(Base):
 
     model = Promocode
 
+    @classmethod
+    async def find_promo(cls, session: AsyncSession, code_id: int):
+        try:
+            query = (select(cls.model).where(cls.model.code_id == code_id and cls.model.uses_left > 0))
+            result = await session.execute(query)
+            record = result.scalar_one_or_none()
+            
+            return record
+        except SQLAlchemyError as e:
+            print(e)
+
+    @classmethod
+    async def reduced_code(cls, session: AsyncSession, code_id: int):
+        try:
+            promo = await session.get(cls.model, code_id)
+            promo.uses_left -= 1
+            
+            await session.commit()
+
+            return promo
+        except SQLAlchemyError as e:
+            await session.rollback()
+
+            print(e)
+            
+
 class UsesOfPromoDAO(Base):
     __tablename__ = 'uses_of_promo_dao'
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     model = UsesOfPromo
+
+    @classmethod
+    async def check_uses(cls, session: AsyncSession, user_id: int, code_id: int):
+        try:
+            query = (select(cls.model).where(cls.model.user_id == user_id and cls.model.code_id == code_id))
+            result = await session.execute(query)
+            record = result.scalar_one_or_none()
+
+            return record
+        except SQLAlchemyError as e:
+            print(e)
+
+
+    @classmethod
+    async def add_uses(cls, session: AsyncSession, values: UsesOfPromoModel, length: int):
+        values_dict = values.model_dump(exclude_unset=True)
+        new_instance = cls.model(**values_dict)
+
+        session.add(new_instance)
+        await PromocodeDAO.reduced_code(session=session, code_id=values.code_id)
+
+        user = await UserDAO.add_length_pipisa(session=session, user_id=values.user_id, length=length)
+
+        try: 
+            await session.commit()
+
+            return user
+        except SQLAlchemyError as e:
+            await session.rollback()
+
+            print(e)
+
+
 
 class BonusDAO(Base):
     __tablename__ = 'bonus_dao'

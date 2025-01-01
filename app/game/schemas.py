@@ -19,7 +19,6 @@ class PromocodeModel(BaseModel):
     length: int
 
 class UsesOfPromoModel(BaseModel):
-    id: int
     user_id: int
     code_id: int
 
