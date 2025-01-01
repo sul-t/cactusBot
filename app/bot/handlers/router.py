@@ -64,7 +64,6 @@ async def start(message: Message, session: AsyncSession, **kwargs):
         return await message.answer('Произошла ошибка при обработке вашего запроса. Пожалуйста сообщите об ошибке <a href=\'t.me/kickspink\'>разработчику</a>!')
 
 
-
 @router.message(Command('grow'))
 @connection()
 async def grow_cactuc(message: Message, session: AsyncSession, **kwargs):
@@ -111,7 +110,6 @@ async def grow_cactuc(message: Message, session: AsyncSession, **kwargs):
         return await message.answer('Произошла ошибка при обработке вашего запроса. Пожалуйста сообщите об ошибке <a href=\'t.me/kickspink\'>разработчику</a>!')
 
 
-
 @router.message(Command('top'))
 @connection()
 async def top_users(message: Message, session: AsyncSession, **kwargs):
@@ -129,8 +127,21 @@ async def top_users(message: Message, session: AsyncSession, **kwargs):
         return await message.answer('Произошла ошибка при обработке вашего запроса. Пожалуйста сообщите об ошибке <a href=\'t.me/kickspink\'>разработчику</a>!')
 
 
-
 @router.message(Command('bonuses'))
+@connection()
 async def bonuses(message: Message, session: AsyncSession, **kwargs):
-    bonuses = await BonusDAO.get_bonuses(session=session)
-    return print(bonuses)
+    try:
+        bonuses = await BonusDAO.get_bonuses(session=session)
+
+        list_bonuses = 'Бонусы: 🎁\n'
+        for bonus in bonuses:
+            list_bonuses += f'День {bonus['min_streak']:2}: + {bonus['bonus_cm']:3}см 🌟, + {bonus['bonus_attempts']:3} попыток 🚀\n'
+
+        return await message.answer(list_bonuses)
+    except Exception as e:
+        print(e)
+
+        return await message.answer('Произошла ошибка при обработке вашего запроса. Пожалуйста сообщите об ошибке <a href=\'t.me/kickspink\'>разработчику</a>!')
+
+
+

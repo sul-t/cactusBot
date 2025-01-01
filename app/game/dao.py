@@ -163,13 +163,16 @@ class BonusDAO(Base):
     @classmethod
     async def get_bonuses(cls, session: AsyncSession):
         try:
-            query = select(cls.model)
+            # bonuses = await session.get(cls.model)
+            query = (
+                select(cls.model.min_streak, cls.model.bonus_cm, cls.model.bonus_attempts)
+            )
 
             result = await session.execute(query)
             records = result.fetchall()
 
             bonus_records = [
-                {"day": bonus.min_streak, "bonus_cm": bonus.bonus_cm, "bonus_attempts": bonus.bonus_attempts}
+                {"min_streak": bonus.min_streak, "bonus_cm": bonus.bonus_cm, "bonus_attempts": bonus.bonus_attempts}
                 for bonus in records
             ]
 
