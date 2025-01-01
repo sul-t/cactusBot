@@ -14,6 +14,7 @@ from app.game.schemas import UserModel, PromocodeModel, UsesOfPromoModel
 from app.bot.keyboard.kbs import reply_keyboard
 from app.database import connection
 from app.bot.create_bot import bot
+from app.config import settings
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +45,7 @@ async def start(message: Message, session: AsyncSession, **kwargs):
         if match_res is None:
             await UserDAO.add_or_update_user(session=session, user_info=message.from_user, length=0)
 
-            return await message.answer(welcome_text, reply_markup=reply_keyboard())
+            return await message.answer(welcome_text)
 
 
         # декодирование реферальной ссылки
@@ -130,7 +131,7 @@ async def top_users(message: Message, session: AsyncSession, **kwargs):
 
         list_top_users = 'Топ 100 пипис мира:\n'
         for user in ranked_users:
-            list_top_users += f'{user['rank']}. {user['first_name']}: {user['length']}см\n'
+            list_top_users += f"{user['rank']}. {user['first_name']}: {user['length']}см\n"
         
         return await message.answer(list_top_users)
     except Exception as e:
@@ -209,3 +210,47 @@ async def promo(message: Message, session: AsyncSession, **kwargs):
         print(e)
         
         return await message.answer('Произошла ошибка при обработке вашего запроса. Пожалуйста сообщите об ошибке <a href=\'t.me/kickspink\'>разработчику</a>!')
+    
+
+@router.message(Command('sending_message'))
+@connection()
+async def answer_message(message: Message, session: AsyncSession, **kwargs):
+    user_id = message.from_user.id
+    if user_id in settings.ADMIN_IDS:
+        number_processed_users = 0
+        inactiv_users = 0
+        
+        users = await UserDAO.all_users(session=session)
+
+        for user in users:
+            number_processed_users += 1
+
+            try:
+                if number_processed_users % 50 == 0:
+                    print(number_processed_users)
+
+                await bot.send_message(
+                    user[0], 
+                    'Дорогие друзья! 🎉\n\n'
+                    'Поздравляю вас с Новым годом! 😊 Хочу выразить благодарность за ваше доверие и использование бота. В 25 году я постараюсь создать для вас нечто поистине грандиозное. ✨\n\n'
+                    'Желаю вам крепкого здоровья 💪, успехов во всех начинаниях 🚀, достижения всех поставленных целей 🌟 и, конечно же, значительного роста вашей пиписы! 📈\n\n'
+                    'Обновления:\n'
+                    '1. Функция уменьшения "пиписы" за неактивность заменена на бонусы за ежедневное использование команды /grow. На 16-й день активного использования вы получите +15 см и 3 дополнительные попытки. 🎁\n'
+                    '2. Все бонусы доступны по команде /bonuses. 🔍\n'
+                    '3. Топ чатов временно недоступен, но возможно вернётся позже. ⏳\n'
+                    '4. Топ «пипис» мира расширен до 30 пользователей и доступен по команде /top 👥\n'
+                    '5. Реферальная программа обновлена: за каждого приглашенного друга вы получаете 25 см вместо 1 см. 🤝\n'
+                    '6. На днях на <a href=\'t.me/that_sultan\'>канале</a> будет опубликован промокод на сантимеры. 🎫\n\n'
+                    'Спасибо за поддержку! Пусть 25 год принесёт радость и новые возможности! 🎄🎆', disable_web_page_preview=True
+                )
+            except:
+                inactiv_users += 1
+                if inactiv_users % 5 == 0:
+                    print(inactiv_users)
+
+                continue
+        
+        print(
+            f'кол-во пользователей {number_processed_users}\n'
+            f'кол-во неактивных пользователей {inactiv_users}'
+            )

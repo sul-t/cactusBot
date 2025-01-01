@@ -51,6 +51,14 @@ class UserDAO(Base):
         return new_instance
     
     @classmethod
+    async def all_users(cls, session: AsyncSession):
+        query = (select(cls.model.user_id))
+        result = await session.execute(query)
+        record = result.fetchall()
+
+        return record
+    
+    @classmethod
     async def add_or_update_user(cls, session: AsyncSession, user_info: UserDataRequest, length: int = 0):
         try:
             user = await session.get(cls.model, user_info.id)
