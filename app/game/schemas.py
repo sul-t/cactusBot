@@ -6,8 +6,8 @@ from datetime import date
 
 class UserModel(BaseModel):
     user_id: int
-    username: str
-    first_name: str
+    username: str | None
+    first_name: str | None
     length: int
     last_grow: date
     bonus_attempts: int

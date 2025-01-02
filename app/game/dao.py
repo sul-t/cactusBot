@@ -97,7 +97,7 @@ class UserDAO(Base):
             print(e)
 
     @classmethod
-    async def get_top_users(cls, session: AsyncSession, user_id: int, limit: int = 100):
+    async def get_top_users(cls, session: AsyncSession, user_id: int, limit: int = 30):
         try:
             query = (
                 select(cls.model.first_name, cls.model.length)
