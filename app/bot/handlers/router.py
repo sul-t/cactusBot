@@ -61,6 +61,10 @@ async def start(message: Message, session: AsyncSession, **kwargs):
         if user_invited_info is None:
             return await message.answer('Некорректная рефферальная ссылка!\nПопросите друга отправить вам ее снова, либо нажмите /start')                
             
+        
+        current_user = await UserDAO.find_user(session=session, user_id=message.from_user.id)
+        if current_user is not None:
+            return await message.answer('Вы уже есть в базе!')  
 
         # обновление данных пользователей
         user = await UserDAO.add_or_update_user(session=session, user_info=message.from_user, length=5)
